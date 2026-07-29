@@ -9,6 +9,37 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ============================================================
+-- PATIENT IDENTIFIERS  (Patient.identifier — repeating)
+-- ============================================================
+CREATE TABLE patient_identifier (
+    id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patient_id      uuid NOT NULL REFERENCES patient(id) ON DELETE CASCADE,
+    type_code       text NOT NULL CHECK (type_code IN (
+                        'NI',   -- National identifier 
+                        'PPN',  -- Passport number
+                        'MR'    -- Medical record number 
+                    )),
+    system          text NOT NULL,   -- URI of the assigning authority, e.g.
+                                      -- 'urn:oid:2.16.818.1.1' (example EG national ID OID)
+                                      -- or 'http://passports.gov/<country>'
+    value           text NOT NULL,   -- the actual ID/passport number
+    country         text,            -- relevant for PPN — issuing country
+    UNIQUE (patient_id, type_code, system)
+);
+
+-- ============================================================
+-- PATIENT TELECOM  (Patient.telecom — repeating)
+-- ============================================================
+CREATE TABLE patient_telecom (
+    id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patient_id      uuid NOT NULL REFERENCES patient(id) ON DELETE CASCADE,
+    system          text NOT NULL CHECK (system IN ('phone','fax','email','pager','url','sms')),
+    value           text NOT NULL,
+    use             text CHECK (use IN ('home','work','temp','old','mobile')) DEFAULT 'mobile',
+    rank            integer          -- preferred order, 1 = primary
+);
+
 -- ------------------------------------------------------------
 -- Reusable composite type for CodeableConcept-like fields
 -- ------------------------------------------------------------
